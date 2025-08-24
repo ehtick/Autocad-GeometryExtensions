@@ -2,6 +2,7 @@
 using Autodesk.AutoCAD.Geometry;
 
 using System;
+using System.Runtime.InteropServices;
 
 namespace Gile.AutoCAD.R20.Geometry
 {
@@ -138,5 +139,55 @@ namespace Gile.AutoCAD.R20.Geometry
             projectedPline.AddVertexAt(1, pt2.Project(plane, direction).Convert2d(), 0.0, 0.0, 0.0);
             return projectedPline;
         }
+
+        #region P/Invoke acedTrans
+        const int RTSHORT = 5003, RTNORM = 5100;
+
+        [DllImport("accore.dll", CallingConvention = CallingConvention.Cdecl, EntryPoint = "acedTrans")]
+        private static extern int acedTrans(double[] point, IntPtr fromRb, IntPtr toRb, int disp, double[] result);
+
+        /// <summary>
+        /// Translates a point or a displacement from one coordinate system into another.
+        /// </summary>
+        /// <param name="coordinateSet">Coordinates of Point3d or Vector3d.</param>
+        /// <param name="from">CoordinateSystem to transform from.</param>
+        /// <param name="to">CoordinateSystem to transform to.</param>
+        /// <param name="disp">If nonzero, pt is treated as a displacement vector; otherwise, it is treated as a point;</param>
+        /// <returns>The coordinates of the translated point or vector.</returns>
+        /// <exception cref="TransException"></exception>
+        public static double[] Trans(double[] coordinateSet, TypedValue from, TypedValue to, int disp)
+        {
+            void Validate(TypedValue typedValue1, TypedValue typedValue2)
+            {
+                if (typedValue1.TypeCode == RTSHORT)
+                {
+                    int fromValue = (int)typedValue1.Value;
+                    if (fromValue < 0 || 3 < fromValue)
+                        throw new TransException();
+                    if (fromValue == 3 &&
+                        (HostApplicationServices.WorkingDatabase.TileMode ||
+                        typedValue2.TypeCode != RTSHORT ||
+                        (int)typedValue2.Value != 2))
+                        throw new TransException();
+                }
+            }
+            Validate(from, to);
+            Validate(to, from);
+            var result = new double[3];
+            if (acedTrans(
+                coordinateSet,
+                new ResultBuffer(from).UnmanagedObject,
+                new ResultBuffer(to).UnmanagedObject,
+                disp,
+                result) != RTNORM)
+                throw new TransException();
+            return result;
+        }
+
+        class TransException : Exception
+        {
+            public TransException() : base("Invalid arguments in coordinate transform request.") { }
+        }
+        #endregion
     }
 }
