@@ -1,11 +1,8 @@
-﻿using System;
-
-using Autodesk.AutoCAD.ApplicationServices;
-using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.EditorInput;
+﻿using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.Runtime;
 
-using AcRx = Autodesk.AutoCAD.Runtime;
+using System;
 
 namespace Gile.AutoCAD.R25.Geometry
 {
@@ -20,7 +17,7 @@ namespace Gile.AutoCAD.R25.Geometry
         /// <param name="pt">The instance to which this method applies.</param>
         /// <returns>The corresponding Point3d.</returns>
         public static Point2d Convert2d(this Point3d pt) =>
-            new Point2d(pt.X, pt.Y);
+            new(pt.X, pt.Y);
 
         /// <summary>
         /// Projects the point on the WCS XY plane.
@@ -28,7 +25,7 @@ namespace Gile.AutoCAD.R25.Geometry
         /// <param name="pt">The point to be projected.</param>
         /// <returns>The projected point.</returns>
         public static Point3d Flatten(this Point3d pt) =>
-            new Point3d(pt.X, pt.Y, 0.0);
+            new(pt.X, pt.Y, 0.0);
 
         /// <summary>
         /// Gets a value indicating if <c>pt</c> lies on the segment <c>p1</c> <c>p2</c> using Tolerance.Global.
@@ -73,145 +70,182 @@ namespace Gile.AutoCAD.R25.Geometry
         /// <param name="distance">The distance from the base point.</param>
         /// <returns>The new point3d.</returns>
         public static Point3d Polar(this Point3d org, double angle, double distance) =>
-            new Point3d(
+            new(
                 org.X + distance * Math.Cos(angle),
                 org.Y + distance * Math.Sin(angle),
                 org.Z);
 
+        #region P/Invoke acedTrans
         /// <summary>
-        /// Converts a point from a coordinate system to another one.
+        /// Translates a point from one coordinate system into another.
         /// </summary>
-        /// <param name="pt">The instance to which this method applies.</param>
-        /// <param name="from">The origin coordinate system flag.</param>
-        /// <param name="to">The destination coordinate system flag.</param>
-        /// <returns>The corresponding Point3d.</returns>
-        /// <exception cref="Autodesk.AutoCAD.Runtime.Exception">
-        /// eInvalidInput thrown of 3 (CoordSystem.PSDCS) is used with another flag than 2 (CoordSystem.DCS).</exception>
-        public static Point3d Trans(this Point3d pt, int from, int to)
-        {
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
-            return pt.Trans(ed, (CoordSystem)from, (CoordSystem)to);
-        }
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Coordinate system code: 0 = WCS, 1 = UCS, 2 = DCS, 3 = PSDCS (used only with code 2).</param>
+        /// <param name="to">Coordinate system code: 0 = WCS, 1 = UCS, 2 = DCS, 3 = PSDCS (used only with code 2).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, int from, int to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Int16, from),
+                new TypedValue((int)LispDataType.Int16, to));
 
         /// <summary>
-        /// Converts a point from a coordinate system to another one.
+        /// Translates a point from one coordinate system into another.
         /// </summary>
-        /// <param name="pt">The instance to which this method applies.</param>
-        /// <param name="ed">Current instance of Editor.</param>
-        /// <param name="from">The origin coordinate system flag.</param>
-        /// <param name="to">The destination coordinate system flag.</param>
-        /// <returns>The corresponding Point3d.</returns>
-        /// <exception cref="Autodesk.AutoCAD.Runtime.Exception">
-        /// eInvalidInput thrown of 3 (CoordSystem.PSDCS) is used with another flag than 2 (CoordSystem.DCS).</exception>
-        public static Point3d Trans(this Point3d pt, Editor ed, int from, int to) =>
-            pt.Trans(ed, (CoordSystem)from, (CoordSystem)to);
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Coordinate system.</param>
+        /// <param name="to">Coordinate system.</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, CoordSystem from, CoordSystem to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Int16, (int)from),
+                new TypedValue((int)LispDataType.Int16, (int)to));
 
         /// <summary>
-        /// Converts a point from a coordinate system to another one.
+        /// Translates a point from one coordinate system into another.
         /// </summary>
-        /// <param name="pt">The instance to which this method applies.</param>
-        /// <param name="from">The origin coordinate system.</param>
-        /// <param name="to">The destination coordinate system.</param>
-        /// <returns>The corresponding Point3d.</returns>
-        /// <exception cref="Autodesk.AutoCAD.Runtime.Exception">
-        /// eInvalidInput thrown of 3 (CoordSystem.PSDCS) is used with another flag than 2 (CoordSystem.DCS).</exception>
-        public static Point3d Trans(this Point3d pt, CoordSystem from, CoordSystem to)
-        {
-            Editor ed = Application.DocumentManager.MdiActiveDocument.Editor;
-            return pt.Trans(ed, from, to);
-        }
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Coordinate system code: 0 = WCS, 1 = UCS, 2 = DCS, 3 = PSDCS (used only with code 2).</param>
+        /// <param name="to">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, int from, ObjectId to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Int16, from),
+                new TypedValue((int)LispDataType.ObjectId, to));
 
         /// <summary>
-        /// Converts a point from a coordinate system to another one.
+        /// Translates a point from one coordinate system into another.
         /// </summary>
-        /// <param name="pt">The instance to which this method applies.</param>
-        /// <param name="ed">Current instance of Editor.</param>
-        /// <param name="from">The origin coordinate system.</param>
-        /// <param name="to">The destination coordinate system.</param>
-        /// <returns>The corresponding Point3d.</returns>
-        /// <exception cref="Autodesk.AutoCAD.Runtime.Exception">
-        /// eInvalidInput thrown of 3 (CoordSystem.PSDCS) is used with another flag than 2 (CoordSystem.DCS).</exception>
-        /// <exception cref="Autodesk.AutoCAD.Runtime.Exception">
-        /// eInvalidInput est lancée si CoordSystem.PSDCS est utilisé avec un autre drapeau que CoordSystem.DCS.</exception>
-        public static Point3d Trans(this Point3d pt, Editor ed, CoordSystem from, CoordSystem to)
-        {
-            Matrix3d mat = new();
-            switch (from)
-            {
-                case CoordSystem.WCS:
-                    switch (to)
-                    {
-                        case CoordSystem.UCS:
-                            mat = ed.WCS2UCS();
-                            break;
-                        case CoordSystem.DCS:
-                            mat = ed.WCS2DCS();
-                            break;
-                        case CoordSystem.PSDCS:
-                            throw new AcRx.Exception(
-                                AcRx.ErrorStatus.InvalidInput,
-                                "To be used only with DCS");
-                        default:
-                            mat = Matrix3d.Identity;
-                            break;
-                    }
-                    break;
-                case CoordSystem.UCS:
-                    switch (to)
-                    {
-                        case CoordSystem.WCS:
-                            mat = ed.UCS2WCS();
-                            break;
-                        case CoordSystem.DCS:
-                            mat = ed.UCS2WCS() * ed.WCS2DCS();
-                            break;
-                        case CoordSystem.PSDCS:
-                            throw new AcRx.Exception(
-                                AcRx.ErrorStatus.InvalidInput,
-                                "To be used only with DCS");
-                        default:
-                            mat = Matrix3d.Identity;
-                            break;
-                    }
-                    break;
-                case CoordSystem.DCS:
-                    switch (to)
-                    {
-                        case CoordSystem.WCS:
-                            mat = ed.DCS2WCS();
-                            break;
-                        case CoordSystem.UCS:
-                            mat = ed.DCS2WCS() * ed.WCS2UCS();
-                            break;
-                        case CoordSystem.PSDCS:
-                            mat = ed.DCS2PSDCS();
-                            break;
-                        default:
-                            mat = Matrix3d.Identity;
-                            break;
-                    }
-                    break;
-                case CoordSystem.PSDCS:
-                    switch (to)
-                    {
-                        case CoordSystem.WCS:
-                            throw new AcRx.Exception(
-                                AcRx.ErrorStatus.InvalidInput,
-                                "To be used only with DCS");
-                        case CoordSystem.UCS:
-                            throw new AcRx.Exception(
-                                AcRx.ErrorStatus.InvalidInput,
-                                "To be used only with DCS");
-                        case CoordSystem.DCS:
-                            mat = ed.PSDCS2DCS();
-                            break;
-                        default:
-                            mat = Matrix3d.Identity;
-                            break;
-                    }
-                    break;
-            }
-            return pt.TransformBy(mat);
-        }
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Coordinate system.</param>
+        /// <param name="to">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, CoordSystem from, ObjectId to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Int16, (int)from),
+                new TypedValue((int)LispDataType.ObjectId, to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Coordinate system code: 0 = WCS, 1 = UCS, 2 = DCS, 3 = PSDCS (used only with code 2).</param>
+        /// <param name="to">Extrusion vector.</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, int from, Vector3d to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Int16, from),
+                new TypedValue((int)LispDataType.Point3d, to.GetAsPoint()));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Coordinate system.</param>
+        /// <param name="to">Extrusion vector.</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, CoordSystem from, Vector3d to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Int16, (int)from),
+                new TypedValue((int)LispDataType.Point3d, to.GetAsPoint()));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <param name="to">Coordinate system code: 0 = WCS, 1 = UCS, 2 = DCS, 3 = PSDCS (used only with code 2).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, ObjectId from, int to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.ObjectId, from),
+                new TypedValue((int)LispDataType.Int16, to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <param name="to">Coordinate system.</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, ObjectId from, CoordSystem to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.ObjectId, from),
+                new TypedValue((int)LispDataType.Int16, (int)to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <param name="to">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, ObjectId from, ObjectId to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.ObjectId, from),
+                new TypedValue((int)LispDataType.ObjectId, to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <param name="to">Extrusion vector.</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, ObjectId from, Vector3d to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.ObjectId, from),
+                new TypedValue((int)LispDataType.Point3d, to.GetAsPoint()));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Extrusion vector.</param>
+        /// <param name="to">Coordinate system code: 0 = WCS, 1 = UCS, 2 = DCS, 3 = PSDCS (used only with code 2).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, Vector3d from, int to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Point3d, from.GetAsPoint()),
+                new TypedValue((int)LispDataType.Int16, to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Extrusion vector.</param>
+        /// <param name="to">Coordinate system.</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, Vector3d from, CoordSystem to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Point3d, from.GetAsPoint()),
+                new TypedValue((int)LispDataType.Int16, (int)to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Extrusion vector.</param>
+        /// <param name="to">ObjectId of a planar entity (this specifies the ECS of the entity).</param>
+        /// <returns>The translated point.</returns>
+        public static Point3d Trans(this Point3d point, Vector3d from, ObjectId to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Point3d, from.GetAsPoint()),
+                new TypedValue((int)LispDataType.ObjectId, to));
+
+        /// <summary>
+        /// Translates a point from one coordinate system into another.
+        /// </summary>
+        /// <param name="point">The instance to which the method applies.</param>
+        /// <param name="from">Extrusion vector.</param>
+        /// <param name="to">Extrusion vector.</param>
+        /// <returns>The translated point.</returns>   
+        public static Point3d Trans(this Point3d point, Vector3d from, Vector3d to) =>
+            point.Trans(
+                new TypedValue((int)LispDataType.Point3d, from.GetAsPoint()),
+                new TypedValue((int)LispDataType.Point3d, to.GetAsPoint()));
+
+        private static Point3d Trans(this Point3d point, TypedValue from, TypedValue to) =>
+            new(GeometryExtension.Trans(point.ToArray(), from, to, 0));
+        #endregion
     }
 }
