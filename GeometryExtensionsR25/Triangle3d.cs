@@ -86,8 +86,7 @@ namespace Gile.AutoCAD.R25.Geometry
         /// Gets the area of the triangle.
         /// </summary>
         public double Area =>
-            Math.Abs(((point1.X - point0.X) * (point2.Y - point0.Y) -
-                (point2.X - point0.X) * (point1.Y - point0.Y)) / 2.0);
+            point0.DistanceTo(point1) * new Line3d(point0, point1).GetDistanceTo(point2) * 0.5;
 
         /// <summary>
         /// Gets the centroid.
