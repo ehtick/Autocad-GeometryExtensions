@@ -53,7 +53,7 @@ namespace Gile.AutoCAD.R25.Geometry
             int numProc = Environment.ProcessorCount;
             parallelDepth = -1;
             while (numProc >> ++parallelDepth > 1) ;
-            Root = Create(source.ToArray(), 0) ?? throw new InvalidOperationException("Empty source");
+            Root = Create([.. source], 0) ?? throw new InvalidOperationException("Empty source");
         }
 
         #endregion
@@ -157,7 +157,9 @@ namespace Gile.AutoCAD.R25.Geometry
         private T GetNeighbour(Point3d center, TreeNode<T>? node, T currentBest, double bestDist)
         {
             if (node == null)
+            {
                 return currentBest;
+            }
             var current = node.Value;
             var currentPosition = getPosition(current);
             int d = node.Depth % dimension;
@@ -170,16 +172,23 @@ namespace Gile.AutoCAD.R25.Geometry
                 bestDist = dist;
             }
             dist = coordCen - coordCur;
-            if (bestDist < dist * dist)
-            {
-                currentBest = GetNeighbour(
-                    center, coordCen < coordCur ? node.LeftChild : node.RightChild, currentBest, bestDist);
-            }
-            else
+            if (coordCen < coordCur)
             {
                 currentBest = GetNeighbour(center, node.LeftChild, currentBest, bestDist);
                 bestDist = sqrDist(center, getPosition(currentBest));
+                if (dist * dist <= bestDist)
+                {
+                    currentBest = GetNeighbour(center, node.RightChild, currentBest, bestDist);
+                }
+            }
+            else
+            {
                 currentBest = GetNeighbour(center, node.RightChild, currentBest, bestDist);
+                bestDist = sqrDist(center, getPosition(currentBest));
+                if (dist * dist <= bestDist)
+                {
+                    currentBest = GetNeighbour(center, node.LeftChild, currentBest, bestDist);
+                }
             }
             return currentBest;
         }
@@ -218,7 +227,10 @@ namespace Gile.AutoCAD.R25.Geometry
 
         private void GetKNeighbours(Point3d center, int number, TreeNode<T>? node, List<(double Distance, T)> items)
         {
-            if (node == null) return;
+            if (node == null)
+            {
+                return;
+            }
             T current = node.Value;
             Point3d currentPosition = getPosition(current);
             double dist = sqrDist(center, currentPosition);
@@ -229,39 +241,48 @@ namespace Gile.AutoCAD.R25.Geometry
             }
             else if (cnt < number)
             {
-                if (dist > items[0].Distance)
+                int i = items.FindIndex(x => x.Distance < dist);
+                if (i == -1)
                 {
-                    items.Insert(0, (dist, current));
+                    items.Add((dist, current));
                 }
                 else
                 {
-                    items.Add((dist, current));
+                    items.Insert(i, (dist, current));
                 }
             }
             else if (dist < items[0].Distance)
             {
-                items[0] = (dist, current);
-                items.Sort((x, y) => y.Distance.CompareTo(x.Distance));
+                items.RemoveAt(0);
+                int i = items.FindIndex(x => x.Distance < dist);
+                if (i == -1)
+                {
+                    items.Add((dist, current));
+                }
+                else
+                {
+                    items.Insert(i, (dist, current));
+                }
             }
             int d = node.Depth % dimension;
             double coordCen = center[d];
             double coordCur = currentPosition[d];
             dist = coordCen - coordCur;
-            if (dist * dist > items[0].Distance)
+            if (coordCen < coordCur)
             {
-                if (coordCen < coordCur)
-                {
-                    GetKNeighbours(center, number, node.LeftChild, items);
-                }
-                else
+                GetKNeighbours(center, number, node.LeftChild, items);
+                if (dist * dist <= items[0].Distance)
                 {
                     GetKNeighbours(center, number, node.RightChild, items);
                 }
             }
             else
             {
-                GetKNeighbours(center, number, node.LeftChild, items);
                 GetKNeighbours(center, number, node.RightChild, items);
+                if (dist * dist <= items[0].Distance)
+                {
+                    GetKNeighbours(center, number, node.LeftChild, items);
+                }
             }
         }
 

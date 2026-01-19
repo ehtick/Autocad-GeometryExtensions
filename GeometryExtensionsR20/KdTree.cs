@@ -183,22 +183,23 @@ namespace Gile.AutoCAD.R20.Geometry
                 bestDist = dist;
             }
             dist = coordCen - coordCur;
-            if (bestDist < dist * dist)
+            if (coordCen < coordCur)
             {
-                if (coordCen < coordCur)
-                {
-                    currentBest = GetNeighbour(center, node.LeftChild, currentBest, bestDist);
-                }
-                else
+                currentBest = GetNeighbour(center, node.LeftChild, currentBest, bestDist);
+                bestDist = sqrDist(center, getPosition(currentBest));
+                if (dist * dist <= bestDist)
                 {
                     currentBest = GetNeighbour(center, node.RightChild, currentBest, bestDist);
                 }
             }
             else
             {
-                currentBest = GetNeighbour(center, node.LeftChild, currentBest, bestDist);
-                bestDist = sqrDist(center, getPosition(currentBest));
                 currentBest = GetNeighbour(center, node.RightChild, currentBest, bestDist);
+                bestDist = sqrDist(center, getPosition(currentBest));
+                if (dist * dist <= bestDist)
+                {
+                    currentBest = GetNeighbour(center, node.LeftChild, currentBest, bestDist);
+                }
             }
             return currentBest;
         }
@@ -281,21 +282,21 @@ namespace Gile.AutoCAD.R20.Geometry
             double coordCen = center[d];
             double coordCur = currentPosition[d];
             dist = coordCen - coordCur;
-            if (dist * dist > items[0].Distance)
+            if (coordCen < coordCur)
             {
-                if (coordCen < coordCur)
-                {
-                    GetKNeighbours(center, number, node.LeftChild, items);
-                }
-                else
+                GetKNeighbours(center, number, node.LeftChild, items);
+                if (dist * dist <= items[0].Distance)
                 {
                     GetKNeighbours(center, number, node.RightChild, items);
                 }
             }
             else
             {
-                GetKNeighbours(center, number, node.LeftChild, items);
                 GetKNeighbours(center, number, node.RightChild, items);
+                if (dist * dist <= items[0].Distance)
+                {
+                    GetKNeighbours(center, number, node.LeftChild, items);
+                }
             }
         }
 
